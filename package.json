@@ -1,21 +1,27 @@
 {
-  "name": "cc-refrigerator-api",
+  "name": "mageiras",
   "version": "1.0.0",
-  "description": "API for Mageiras' digital refrigerator feature",
-  "main": "index.js",
+  "description": "Aplikasi untuk mendeteksi bahan makanan dan memberikan rekomendasi resep",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@google-cloud/firestore": "^7.7.0",
-    "@hapi/hapi": "^21.3.9",
-    "@tensorflow/tfjs-node": "^4.14.0",
-    "dotenv": "^16.4.5"
+    "@hapi/hapi": "^20.1.2",
+    "firebase-admin": "^9.8.0",
+    "dotenv": "^10.0.0",
+    "body-parser": "^1.19.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^8.5.1",
+    "@hapi/joi": "^17.1.1",
+    "@google-cloud/vision": "^3.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.2"
-  }
+    "nodemon": "^2.0.7",
+    "eslint": "^7.23.0",
+    "prettier": "^2.2.1"
+  },
+  "author": "",
+  "license": "MIT"
 }
