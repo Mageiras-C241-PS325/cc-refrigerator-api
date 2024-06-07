@@ -22,7 +22,7 @@ exports.getIngredients = (db) => async (req, h) => {
     snapshot.forEach((doc) => {
       ingredients.push({ id: doc.id, ...doc.data() });
     });
-    return h.response(ingredients);
+    return h.response(ingredients).code(201);
   } catch (error) {
     return h.response({ error: error.message }).code(500);
   }
@@ -105,7 +105,7 @@ exports.deleteAllIngredients = (db) => async (req, h) => {
       batch.delete(doc.ref);
     });
     await batch.commit();
-    return h.response({ message: 'All ingredients deleted successfully' });
+    return h.response({ message: 'All ingredients deleted successfully' }).code(201);
   } catch (error) {
     return h.response({ error: error.message }).code(500);
   }
@@ -124,7 +124,7 @@ exports.deleteMultipleIngredients = (db) => async (req, h) => {
       }
     }
     await batch.commit();
-    return h.response({ message: 'Selected ingredients deleted successfully' });
+    return h.response({ message: 'Selected ingredients deleted successfully' }).code(201);
   } catch (error) {
     return h.response({ error: error.message }).code(500);
   }

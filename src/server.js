@@ -1,5 +1,5 @@
 const Hapi = require('@hapi/hapi');
-const { db, bucket } = require('./config/db');
+// const { db, bucket } = require('./config/db');
 
 const init = async () => {
   const server = Hapi.server({
@@ -8,8 +8,8 @@ const init = async () => {
   });
 
   // Register routes
-  await server.register(require('./routes/authRoutes')(db));
-  await server.register(require('./routes/ingredientRoutes')(db, bucket));
+  // await server.register(require('./routes/authRoutes')(db));
+  // await server.register(require('./routes/ingredientRoutes')(db, bucket));
 
   await server.start();
   console.log(`Server running on ${server.info.uri}`);
