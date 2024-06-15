@@ -26,21 +26,20 @@ Utilize JavaScript’s runtime Node.js with HAPI framework for the web server fo
 6. Cloud Storage
 
 # Endpoint
-
 |  Endpoint | Method | Body Request (JSON) | Body Response (JSON) |
 | ------------ | ------------ | ------------ | ------------ |
-| /login | POST | - | - |
-| /register | POST | - | - |
-| /logout | POST | - | - |
-| /predict | POST | - | - |
-| /ingredients/add | POST | - | - |
-| /ingredients/{id}/amount | PUT | - | - |
-| /ingredients/updateOrAdds | PUT | - | - |
-| /ingredients | GET | - | - |
-| /ingredients/{id} | GET | - | - |
-| /ingredients/{id} | DELETE | - | - |
-| /ingredients | DELETE | - | - |
-| /ingredients/multiple | DELETE | - | - |
+| /login | POST | email, password | status, message |
+| /register | POST | username, email, password | status, message |
+| /logout | POST | email, password | status, message |
+| /predict | POST | - | recipe_name, recipe_ingredients, recipe_label, recipe_directions, recipe_genre |
+| /ingredients/add | POST | ingredient_name, quantity | status, message |
+| /ingredients/{id}/amount | PUT | ingredient_name, quantity | status, message |
+| /ingredients/updateOrAdds | PUT | ingredient_name, quantity | status, message |
+| /ingredients | GET | email, password | ingredient_name, quantity |
+| /ingredients/{id} | GET | ingredient_id | ingredient_id, ingredient_name, quantity |
+| /ingredients/{id} | DELETE | ingredient_id | status, message |
+| /ingredients | DELETE | email, password | status, message |
+| /ingredients/multiple | DELETE | ingredient_id | status, message |
 
 # Architecture
 ![]()
