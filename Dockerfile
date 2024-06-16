@@ -20,4 +20,4 @@ RUN ls -la
 EXPOSE 7000
 
 # Define the command to run the application
-CMD ["node", "src/server.js"]
+CMD ["npm", "start"]
