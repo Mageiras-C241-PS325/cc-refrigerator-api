@@ -1,5 +1,6 @@
 # Package lock
 package-lock.json
+serviceAccountKey.json
 
 # Logs
 logs

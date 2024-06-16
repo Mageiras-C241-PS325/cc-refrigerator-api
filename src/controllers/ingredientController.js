@@ -1,6 +1,88 @@
-const vision = require('@google-cloud/vision');
+const fileType = require('file-type');
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
+const { Storage } = require('@google-cloud/storage');
+const dotenv = require('dotenv');
 
-const client = new vision.ImageAnnotatorClient();
+// Load environment variables from .env file
+dotenv.config();
+
+// Initialize Google Cloud Storage
+const storage = new Storage({
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  keyFilename: path.join(__dirname, './serviceAccountKey.json')
+});
+
+const bucketName = process.env.GCP_BUCKET_NAME;
+const bucket = storage.bucket(bucketName);
+
+let recipeDataset = [];
+
+exports.predictIngredients = async (req, h) => {
+  try {
+    const file = req.payload.file; // either the file itself or base64 string
+    let imageBuffer;
+    let fileName;
+
+    // Check if the file is in base64 format
+    if (typeof file === 'string') {
+      // Decode base64 string to image
+      const base64Data = file.split(';base64,').pop();
+      imageBuffer = Buffer.from(base64Data, 'base64');
+
+      // Determine the file type
+      const { ext } = await fileType.fromBuffer(imageBuffer);
+      if (!['jpg', 'jpeg', 'png'].includes(ext)) {
+        return h.response({ error: 'Invalid image format. Only jpg, jpeg, and png are allowed.' }).code(400);
+      }
+
+      fileName = `image_${Date.now()}.${ext}`;
+      fs.writeFileSync(fileName, imageBuffer);
+    } else {
+      // Handle file upload
+      const { mimetype, filename, path: tempFilePath } = file.hapi;
+      const { ext } = await fileType.fromFile(tempFilePath);
+      if (!['jpg', 'jpeg', 'png'].includes(ext)) {
+        return h.response({ error: 'Invalid image format. Only jpg, jpeg, and png are allowed.' }).code(400);
+      }
+
+      imageBuffer = fs.readFileSync(tempFilePath);
+      fileName = filename;
+    }
+
+    // Send image to Django API
+    const formData = new FormData();
+    formData.append('file', imageBuffer, {
+      filename: fileName,
+      contentType: 'image/jpeg'
+    });
+
+    const response = await axios.post(process.env.DJANGO_API_ENDPOINT, formData, {
+      headers: {
+        ...formData.getHeaders()
+      }
+    });
+
+    const recipe_file = bucket.file('recipes.json');
+    const tempFilePath = path.join(__dirname, 'recipes.json');
+
+    await recipe_file.download({ destination: tempFilePath });
+
+    const rawData = fs.readFileSync(tempFilePath);
+    recipeDataset = JSON.parse(rawData);
+
+    // Clean up locally saved file if base64 decoded
+    if (typeof recipe_file === 'string' && fs.existsSync(fileName)) {
+      fs.unlinkSync(fileName);
+    }
+
+    return h.response({ message: 'File uploaded successfully', url: publicUrl }).code(200);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    return h.response({ error: error.message }).code(500);
+  }
+};
 
 exports.addIngredient = (db) => async (req, h) => {
   const { name, amount } = req.payload;
@@ -60,26 +142,6 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
   }
 };
 
-exports.updateOrAddIngredient = (db) => async (req, h) => {
-  const { name, amount } = req.payload;
-  const userId = req.user.user_id;
-  try {
-    const snapshot = await db.collection('ingredients').where('userId', '==', userId).where('name', '==', name).get();
-    if (snapshot.empty) {
-      const ingredientDoc = db.collection('ingredients').doc();
-      await ingredientDoc.set({ name, amount, userId });
-      return h.response({ message: 'Ingredient added to fridge' }).code(201);
-    } else {
-      snapshot.forEach(async (doc) => {
-        await doc.ref.update({ amount });
-      });
-      return h.response({ message: 'Ingredient amount updated successfully' });
-    }
-  } catch (error) {
-    return h.response({ error: error.message }).code(500);
-  }
-};
-
 exports.deleteIngredientById = (db) => async (req, h) => {
   const { id } = req.params;
   const userId = req.user.user_id;
@@ -109,57 +171,4 @@ exports.deleteAllIngredients = (db) => async (req, h) => {
   } catch (error) {
     return h.response({ error: error.message }).code(500);
   }
-};
-
-exports.deleteMultipleIngredients = (db) => async (req, h) => {
-  const { ids } = req.payload;
-  const userId = req.user.user_id;
-  try {
-    const batch = db.batch();
-    for (let id of ids) {
-      const ingredientDoc = db.collection('ingredients').doc(id);
-      const ingredient = await ingredientDoc.get();
-      if (ingredient.exists && ingredient.data().userId === userId) {
-        batch.delete(ingredientDoc);
-      }
-    }
-    await batch.commit();
-    return h.response({ message: 'Selected ingredients deleted successfully' }).code(201);
-  } catch (error) {
-    return h.response({ error: error.message }).code(500);
-  }
-};
-
-exports.predictIngredients = async (req, h) => {
-  const { file } = req.payload;
-
-  // Buat buffer dari file yang diunggah
-  const buffer = [];
-
-  return new Promise((resolve, reject) => {
-    file.on('data', (data) => {
-      buffer.push(data);
-    });
-
-    file.on('end', async () => {
-      const imageBuffer = Buffer.concat(buffer);
-      
-      try {
-        // Gunakan Google Cloud Vision API untuk memprediksi konten gambar
-        const [result] = await client.objectLocalization({
-          image: { content: imageBuffer.toString('base64') },
-        });
-
-        const objects = result.localizedObjectAnnotations.map(object => object.name);
-
-        resolve(h.response({ ingredients: objects }).code(200));
-      } catch (error) {
-        reject(h.response({ error: error.message }).code(500));
-      }
-    });
-
-    file.on('error', (err) => {
-      reject(h.response({ error: err.message }).code(500));
-    });
-  });
 };
