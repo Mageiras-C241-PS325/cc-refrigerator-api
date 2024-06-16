@@ -34,14 +34,14 @@ jobs:
         tags: ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
 
     - name: Deploy to VM
-        if: github.event_name == 'push'
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
-            docker stop cc-refrigerator-api || true
-            docker rm cc-refrigerator-api || true
-            docker run -d --name cc-refrigerator-api -p 80:7000 ${{ secrets.DOCKER_USERNAME }}/your-hapi-app:latest
+      if: github.event_name == 'push'
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
+          docker stop cc-refrigerator-api || true
+          docker rm cc-refrigerator-api || true
+          docker run -d --name cc-refrigerator-api -p 80:7000 ${{ secrets.DOCKER_USERNAME }}/your-hapi-app:latest
