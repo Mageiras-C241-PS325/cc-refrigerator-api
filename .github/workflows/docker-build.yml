@@ -31,4 +31,4 @@ jobs:
       with:
         context: .
         push: ${{ github.event_name == 'push' }}
-        tags: ${{ secrets.DOCKER_USERNAME }}/your-hapi-app:latest
+        tags: ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
