@@ -40,9 +40,10 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
         port: 22
         script: |
           docker pull ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
           docker stop cc-refrigerator-api || true
           docker rm cc-refrigerator-api || true
-          docker run -d --name cc-refrigerator-api -p 80:7000 ${{ secrets.DOCKER_USERNAME }}/your-hapi-app:latest
+          docker run -d --name cc-refrigerator-api -p 80:7000 ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
