@@ -29,17 +29,15 @@ Utilize JavaScript’s runtime Node.js with HAPI framework for the web server fo
 |  Endpoint | Method | Body Request (JSON) | Body Response (JSON) |
 | ------------ | ------------ | ------------ | ------------ |
 | /login | POST | email, password | status, message |
-| /register | POST | username, email, password | status, message |
+| /register | POST | email, password, username | status, message, token |
 | /logout | POST | email, password | status, message |
-| /predict | POST | - | recipe_name, recipe_ingredients, recipe_label, recipe_directions, recipe_genre |
-| /ingredients/add | POST | ingredient_name, quantity | status, message |
-| /ingredients/{id}/amount | PUT | ingredient_name, quantity | status, message |
-| /ingredients/updateOrAdds | PUT | ingredient_name, quantity | status, message |
-| /ingredients | GET | email, password | ingredient_name, quantity |
-| /ingredients/{id} | GET | ingredient_id | ingredient_id, ingredient_name, quantity |
-| /ingredients/{id} | DELETE | ingredient_id | status, message |
-| /ingredients | DELETE | email, password | status, message |
-| /ingredients/multiple | DELETE | ingredient_id | status, message |
+| /predict | POST | base64 | ingredients |
+| /ingredients/add | POST | user_id, ingredient_name, amount | status, message |
+| /ingredients | GET | user_id | ingredient_name, amount |
+| /ingredients/{ingredient_id} | GET | user_id, ingredient_id | ingredient_id, ingredient_name, amount |
+| /ingredients/amount/{ingredient_id} | PUT | user_id, ingredient_id, amount | status, message |
+| /ingredients/{ingredient_id} | DELETE | user_id, ingredient_id | status, message |
+| /ingredients | DELETE | user_id | status, message |
 
 # Architecture
 ![]()

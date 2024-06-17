@@ -9,6 +9,20 @@ module.exports = (db, bucket) => {
       server.route([
         {
           method: 'POST',
+          path: '/predict',
+          options: { 
+            pre: [{ method: auth }],
+            payload: {
+              maxBytes: 10485760, // 10MB
+              output: 'stream',
+              parse: true,
+              allow: 'multipart/form-data'
+            }
+          },
+          handler: ingredientController.predictIngredients
+        },
+        {
+          method: 'POST',
           path: '/ingredients/add',
           options: { pre: [{ method: auth }] },
           handler: ingredientController.addIngredient(db)
@@ -21,25 +35,19 @@ module.exports = (db, bucket) => {
         },
         {
           method: 'GET',
-          path: '/ingredients/{id}',
+          path: '/ingredients/{ingredient_id}',
           options: { pre: [{ method: auth }] },
           handler: ingredientController.getIngredientById(db)
         },
         {
           method: 'PUT',
-          path: '/ingredients/{id}/amount',
+          path: '/ingredients/amount/{ingredient_id}',
           options: { pre: [{ method: auth }] },
           handler: ingredientController.updateIngredientAmount(db)
         },
         {
-          method: 'PUT',
-          path: '/ingredients/updateOrAdd',
-          options: { pre: [{ method: auth }] },
-          handler: ingredientController.updateOrAddIngredient(db)
-        },
-        {
           method: 'DELETE',
-          path: '/ingredients/{id}',
+          path: '/ingredients/{ingredient_id}',
           options: { pre: [{ method: auth }] },
           handler: ingredientController.deleteIngredientById(db)
         },
@@ -48,26 +56,6 @@ module.exports = (db, bucket) => {
           path: '/ingredients',
           options: { pre: [{ method: auth }] },
           handler: ingredientController.deleteAllIngredients(db)
-        },
-        {
-          method: 'DELETE',
-          path: '/ingredients/multiple',
-          options: { pre: [{ method: auth }] },
-          handler: ingredientController.deleteMultipleIngredients(db)
-        },
-        {
-          method: 'POST',
-          path: '/predict',
-          options: { 
-            pre: [{ method: auth }],
-            payload: {
-              maxBytes: 10485760, // 10MB
-              output: 'stream',
-              parse: true,
-              allow: 'multipart/form-data'
-            }
-          },
-          handler: ingredientController.predictIngredients
         }
       ]);
     }

@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 // Load environment variables from .env file
 dotenv.config();
 
-const serviceAccount = require('../../serviceAccountKey.json');
+const serviceAccount = require('./serviceAccountKey.json');
 
 // Inisialisasi Firebase Admin SDK menggunakan akun layanan dari GCP
 admin.initializeApp({
