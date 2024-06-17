@@ -1,21 +1,27 @@
 const admin = require('firebase-admin');
 const dotenv = require('dotenv');
+const path = require('path');
 
 // Load environment variables from .env file
 dotenv.config();
 
-const serviceAccount = require('./serviceAccountKey.json');
-
-// Inisialisasi Firebase Admin SDK menggunakan akun layanan dari GCP
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+// Inisialisasi Firebase Admin SDK untuk autentikasi
+const firebaseServiceAccount = require(path.join(__dirname, 'firebaseServiceAccountKey.json'));
+const firebaseAdmin = admin.initializeApp({
+  credential: admin.credential.cert(firebaseServiceAccount),
   databaseURL: process.env.FIREBASE_DATABASE_URL,
+}, 'firebaseAuth'); // Memberi nama instance ini
+
+// Inisialisasi Firebase Admin SDK untuk Firestore
+const gcpServiceAccount = require(path.join(__dirname, 'gcpServiceAccountKey.json'));
+const gcpAdmin = admin.initializeApp({
+  credential: admin.credential.cert(gcpServiceAccount),
   projectId: process.env.FIREBASE_PROJECT_ID,
-  apiKey: process.env.FIREBASE_API_KEY,
   storageBucket: process.env.GCP_BUCKET_NAME
-});
+}, 'firestore'); // Memberi nama instance ini
 
-const db = admin.firestore();
-const bucket = admin.storage().bucket();
+const auth = firebaseAdmin.auth(); // Instance untuk autentikasi
+const db = gcpAdmin.firestore(); // Instance untuk Firestore
+const bucket = gcpAdmin.storage().bucket(); // Instance untuk Cloud Storage
 
-module.exports = { db, bucket };
+module.exports = { db, bucket, auth };

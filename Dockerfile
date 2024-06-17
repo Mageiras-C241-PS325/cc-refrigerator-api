@@ -20,4 +20,4 @@ RUN ls -la
 EXPOSE 7000
 
 # Define the command to run the application
-CMD ["npm", "start"]
+CMD ["npm", "run", "start"]

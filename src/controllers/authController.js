@@ -1,9 +1,9 @@
-const admin = require('firebase-admin');
+const { auth } = require('../config/db');
 
 exports.register = (db) => async (req, h) => {
   const { email, password, username } = req.payload;
   try {
-    const userRecord = await admin.auth().createUser({
+    const userRecord = await auth.createUser({
       email,
       password,
       displayName: username,
@@ -17,8 +17,8 @@ exports.register = (db) => async (req, h) => {
 exports.login = (db) => async (req, h) => {
   const { email, password } = req.payload;
   try {
-    const user = await admin.auth().getUserByEmail(email);
-    const token = await admin.auth().createCustomToken(user.uid);
+    const user = await auth.getUserByEmail(email);
+    const token = await auth.createCustomToken(user.uid);
     return h.response({ token });
   } catch (error) {
     return h.response({ error: error.message }).code(500);
