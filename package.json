@@ -8,8 +8,7 @@
     "start:dev": "nodemon src/server.js"
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.11.2",
-    "@google-cloud/vision": "^3.0.0",
+    "@google-cloud/firestore": "^7.8.0",
     "@hapi/hapi": "^20.1.2",
     "@hapi/joi": "^17.1.1",
     "axios": "^1.7.2",

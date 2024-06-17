@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Path ke file kunci akun layanan
-const serviceAccountPath = path.join(__dirname, 'serviceaccount.json');
+const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
 
 // Inisialisasi Firestore dengan kredensial akun layanan
 const firestore = new Firestore({
@@ -12,7 +12,7 @@ const firestore = new Firestore({
 });
 
 // Path ke file JSON
-const dataPath = path.join(__dirname, '3A2M_EXTENDED_FILTERED_SAMPLED.json');
+const dataPath = path.join(__dirname, 'recipe_dataset.json');
 
 // Baca file JSON
 const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));

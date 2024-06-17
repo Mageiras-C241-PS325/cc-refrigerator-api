@@ -2,20 +2,10 @@ const fileType = require('file-type');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const { Storage } = require('@google-cloud/storage');
 const dotenv = require('dotenv');
 
 // Load environment variables from .env file
 dotenv.config();
-
-// Initialize Google Cloud Storage
-const storage = new Storage({
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  keyFilename: path.join(__dirname, './serviceAccountKey.json')
-});
-
-const bucketName = process.env.GCP_BUCKET_NAME;
-const bucket = storage.bucket(bucketName);
 
 let recipeDataset = [];
 
@@ -58,19 +48,28 @@ exports.predictIngredients = async (req, h) => {
       contentType: 'image/jpeg'
     });
 
-    const response = await axios.post(process.env.DJANGO_API_ENDPOINT, formData, {
+    const ingredients = await axios.post(process.env.DJANGO_API_ENDPOINT, formData, {
       headers: {
         ...formData.getHeaders()
       }
     });
 
-    const recipe_file = bucket.file('recipes.json');
-    const tempFilePath = path.join(__dirname, 'recipes.json');
+    const recipeCollection = db.collection('recipes');
+    const matchedRecipes = new Set();
 
-    await recipe_file.download({ destination: tempFilePath });
+    for (let ingredient of ingredients) {
+      const querySnapshot = await recipeCollection.where('ingredients', 'array-contains', ingredient).get();
+      querySnapshot.forEach(doc => {
+        matchedRecipes.add(doc.data());
+      });
+    }
 
-    const rawData = fs.readFileSync(tempFilePath);
-    recipeDataset = JSON.parse(rawData);
+    // Filter recipes to include only those that match all ingredients
+    const filteredRecipes = Array.from(matchedRecipes).filter(recipe =>
+      ingredients.every(ingredient => recipe.ingredients.includes(ingredient))
+    );
+
+    console.log(filteredRecipes);
 
     // Clean up locally saved file if base64 decoded
     if (typeof recipe_file === 'string' && fs.existsSync(fileName)) {
