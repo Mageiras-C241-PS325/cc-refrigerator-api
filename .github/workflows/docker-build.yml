@@ -32,6 +32,10 @@ jobs:
         context: .
         push: ${{ github.event_name == 'push' }}
         tags: ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
+        build-args: |
+          ENV_FILE=${{ secrets.ENV_FILE }}
+          FIREBASE_SERVICE_ACCOUNT=${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GCP_SERVICE_ACCOUNT=${{ secrets.GCP_SERVICE_ACCOUNT }}
 
     - name: Deploy to VM
       if: github.event_name == 'push'
@@ -46,4 +50,4 @@ jobs:
           docker pull ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
           docker stop cc-refrigerator-api || true
           docker rm cc-refrigerator-api || true
-          docker run -d --name cc-refrigerator-api -p 80:7000 ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
+          docker run -d --name cc-refrigerator-api -p 80:3000 ${{ secrets.DOCKER_USERNAME }}/ccrefrigeratorapi:latest
