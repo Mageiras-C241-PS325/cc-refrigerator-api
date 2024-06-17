@@ -26,7 +26,7 @@ RUN echo "$GCP_SERVICE_ACCOUNT" | base64 -d > ./src/config/gcpServiceAccountKey.
 RUN ls -la
 
 # Expose the port that the Hapi.js server will run on
-EXPOSE 7000
+EXPOSE 3000
 
 # Define the command to run the application
 CMD ["npm", "run", "start"]
