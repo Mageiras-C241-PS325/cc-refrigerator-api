@@ -1,7 +1,6 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
-const fileType = require('file-type');
 const axios = require('axios');
 const FormData = require('form-data');
 const { Storage } = require('@google-cloud/storage');
@@ -77,6 +76,8 @@ exports.deleteRecipe = (db) => async (req, h) => {
 };
 
 exports.predictIngredients = async (req, h) => {
+  const fileType = await import('file-type');
+  
   try {
     const { file } = req.payload;
     let imageBuffer;
@@ -115,6 +116,8 @@ exports.predictIngredients = async (req, h) => {
 
 exports.addIngredient = (db) => async (req, h) => {
   const { name, amount } = req.payload;
+  console.log(req);
+  return h.response(name + ", " + amount);
   const userId = req.user ? req.user.user_id : null;
   if (!userId) {
     return h.response({ error: 'User not authenticated' }).code(401);

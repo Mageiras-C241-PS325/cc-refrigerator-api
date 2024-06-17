@@ -1,5 +1,5 @@
 const Hapi = require('@hapi/hapi');
-const { db, bucket } = require('./src/config/db');
+const { db } = require('./src/config/db');
 
 const init = async () => {
   const server = Hapi.server({
@@ -17,7 +17,7 @@ const init = async () => {
   await server.register(require('./src/routes/authRoutes')(db));
   console.log('Auth routes registered');
 
-  await server.register(require('./src/routes/ingredientRoutes')(db, bucket));
+  await server.register(require('./src/routes/ingredientRoutes')(db));
   console.log('Ingredient routes registered');
 
   await server.start();
