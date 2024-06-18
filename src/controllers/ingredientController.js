@@ -1,5 +1,8 @@
 const axios = require('axios');
 const FormData = require('form-data');
+const { Firestore } = require('@google-cloud/firestore');
+const { nanoid } = require('nanoid');
+
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -105,14 +108,26 @@ exports.predictIngredients = async (req, h) => {
 exports.addIngredient = (db) => async (req, h) => {
   const { name, amount } = req.payload;
   const userId = req.user ? req.user.user_id : null;
+
   if (!userId) {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
+  const id = nanoid(4);
+  const data = {
+    "userId": userId,
+    "name": name,
+    "amount": amount
+  }
+  
+  const db_fs = new Firestore();
+  const refrigeratorCollection = db_fs.collection('refrigerator');
+
+  console.log(id, data);
+
   try {
-    const ingredientDoc = db.collection('ingredients').doc();
-    await ingredientDoc.set({ name, amount, userId });
-    return h.response({ message: 'Ingredient added successfully' }).code(201);
+    await refrigeratorCollection.doc(id).set(data);
+    return h.response({ ingredient_id: id, message: 'Ingredient added successfully' }).code(201);
   } catch (error) {
     return h.response({ error: error.message }).code(500);
   }
