@@ -203,6 +203,32 @@
 		},
 		{
 			"name": "Add Ingredient",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('response status code should have 201 value', () => {\r",
+							"    pm.response.to.have.status(201);\r",
+							"});\r",
+							"\r",
+							"pm.test('response body should be an object', () => {\r",
+							"    const responseJson = pm.response.json();\r",
+							"    pm.expect(responseJson).to.be.an('object');\r",
+							"});\r",
+							"\r",
+							"pm.test('response body should have correct property and value', () => {\r",
+							"    const responseJson = pm.response.json();\r",
+							"    pm.expect(responseJson).to.ownProperty('message');\r",
+							"    pm.expect(responseJson.message).to.equals('Ingredient added successfully');\r",
+							"\r",
+							"    pm.environment.set(\"ingredient_id\", responseJson.id);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"auth": {
 					"type": "bearer",
@@ -218,7 +244,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"name\": \"Tomato\",\r\n  \"amount\": 5\r\n}\r\n",
+					"raw": "{\r\n  \"name\": \"lele\",\r\n  \"amount\": 2\r\n}\r\n",
 					"options": {
 						"raw": {
 							"language": "json"
