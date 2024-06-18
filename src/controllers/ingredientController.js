@@ -1,19 +1,7 @@
-const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
-const { Storage } = require('@google-cloud/storage');
 const dotenv = require('dotenv');
 dotenv.config();
-
-const storage = new Storage({
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  keyFilename: path.join(__dirname, '../gcpServiceAccountKey.json')
-});
-
-const bucketName = process.env.GCP_BUCKET_NAME;
-const bucket = storage.bucket(bucketName);
 
 exports.getRecipeDataset = (db) => async (req, h) => {
   try {
@@ -116,8 +104,6 @@ exports.predictIngredients = async (req, h) => {
 
 exports.addIngredient = (db) => async (req, h) => {
   const { name, amount } = req.payload;
-  console.log(req);
-  return h.response(name + ", " + amount);
   const userId = req.user ? req.user.user_id : null;
   if (!userId) {
     return h.response({ error: 'User not authenticated' }).code(401);
@@ -140,7 +126,8 @@ exports.getIngredients = (db) => async (req, h) => {
 
   try {
     const ingredients = [];
-    const snapshot = await db.collection('ingredients').where('userId', '==', userId).get();
+    const snapshot = await db.collection('recipes').get();
+    // const snapshot = await db.collection('ingredients').where('userId', '==', userId).get();
     snapshot.forEach((doc) => {
       ingredients.push({ id: doc.id, ...doc.data() });
     });

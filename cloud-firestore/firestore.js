@@ -18,7 +18,7 @@ const dataPath = path.join(__dirname, 'recipes.json');
 const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
 // Nama koleksi di Firestore
-const collectionName = 'Mageiras';
+const collectionName = 'recipes';
 
 // Fungsi untuk mengunggah data
 const uploadData = async () => {

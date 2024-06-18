@@ -1,6 +1,9 @@
 # Package lock
 package-lock.json
 serviceAccountKey.json
+firebaseServiceAccountKey.json
+gcpServiceAccountKey.json
+serviceaccount.json
 
 # Logs
 logs
@@ -132,6 +135,3 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-
-firebaseServiceAccountKey.json
-gcpServiceAccountKey.json

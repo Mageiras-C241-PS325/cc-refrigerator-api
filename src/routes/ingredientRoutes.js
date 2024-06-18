@@ -1,5 +1,5 @@
 const ingredientController = require('../controllers/ingredientController');
-// const auth = require('../middleware/auth');
+const auth = require('../middleware/auth');
 
 module.exports = (db) => {
   return {
@@ -11,7 +11,7 @@ module.exports = (db) => {
           method: 'POST',
           path: '/predict',
           options: { 
-            // pre: [{ method: auth }],
+            pre: [auth],
             payload: {
               maxBytes: 10485760, // 10MB
               output: 'stream',
@@ -24,37 +24,37 @@ module.exports = (db) => {
         {
           method: 'POST',
           path: '/ingredients/add',
-          // options: { pre: [{ method: auth }] },
+          options: { pre: [auth] },
           handler: ingredientController.addIngredient(db)
         },
         {
           method: 'GET',
           path: '/ingredients',
-          // options: { pre: [{ method: auth }] },
+          options: { pre: [auth] },
           handler: ingredientController.getIngredients(db)
         },
         {
           method: 'GET',
           path: '/ingredients/{ingredient_id}',
-          // options: { pre: [{ method: auth }] },
+          options: { pre: [auth] },
           handler: ingredientController.getIngredientById(db)
         },
         {
           method: 'PUT',
           path: '/ingredients/amount/{ingredient_id}',
-          // options: { pre: [{ method: auth }] },
+          options: { pre: [auth] },
           handler: ingredientController.updateIngredientAmount(db)
         },
         {
           method: 'DELETE',
           path: '/ingredients/{ingredient_id}',
-          // options: { pre: [{ method: auth }] },
+          options: { pre: [auth] },
           handler: ingredientController.deleteIngredientById(db)
         },
         {
           method: 'DELETE',
           path: '/ingredients',
-          // options: { pre: [{ method: auth }] },
+          options: { pre: [auth] },
           handler: ingredientController.deleteAllIngredients(db)
         }
       ]);

@@ -1,4 +1,5 @@
 const { auth } = require('../config/db');
+const axios = require('axios');
 
 exports.register = (db) => async (req, h) => {
   const { email, password, username } = req.payload;
@@ -17,11 +18,18 @@ exports.register = (db) => async (req, h) => {
 exports.login = (db) => async (req, h) => {
   const { email, password } = req.payload;
   try {
-    const user = await auth.getUserByEmail(email);
-    const token = await auth.createCustomToken(user.uid);
-    return h.response({ token });
+    // Sign in the user with email and password using Firebase Auth REST API
+    const response = await axios.post(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.FIREBASE_API_KEY}`, {
+      email,
+      password,
+      returnSecureToken: true
+    });
+
+    const idToken = response.data.idToken;
+
+    return h.response({ idToken });
   } catch (error) {
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: error.response ? error.response.data : error.message }).code(500);
   }
 };
 
