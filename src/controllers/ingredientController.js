@@ -178,7 +178,7 @@ exports.addIngredient = (db) => async (req, h) => {
 
 exports.addMultipleIngredients = (db) => async (req, h) => {
   console.log(JSON.parse(req.payload.ingredients))
-  const { ingredients } = JSON.parse(req.payload);
+  const ingredients = JSON.parse(req.payload.ingredients);
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
@@ -238,7 +238,7 @@ exports.getIngredients = (db) => async (req, h) => {
 
     return h.response({
       error: false,
-      message: 'No ingredients found',
+      message: 'Succesfully retrieved ingredients',
       ingredients: ingredients,
     }).code(200);
   } catch (error) {
@@ -305,7 +305,7 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
 };
 
 exports.updateMultipleIngredientsAmount = (db) => async (req, h) => {
-  const { ingredients } = JSON.parse(req.payload);
+  const ingredients = JSON.parse(req.payload.ingredients);
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
