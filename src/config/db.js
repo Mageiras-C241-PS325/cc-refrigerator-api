@@ -20,10 +20,7 @@ const gcpAdmin = admin.initializeApp({
   storageBucket: process.env.GCP_BUCKET_NAME
 }, 'firestore'); // Memberi nama instance ini
 
-console.log("Database is running");
-
 const auth = firebaseAdmin.auth(); // Instance untuk autentikasi
 const db = gcpAdmin.firestore(); // Instance untuk Firestore
-const bucket = gcpAdmin.storage().bucket(); // Instance untuk Cloud Storage
 
-module.exports = { db, bucket, auth };
+module.exports = { db, auth };
