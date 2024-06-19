@@ -11,6 +11,22 @@ const upload = multer({ dest: 'uploads/' });
 const dotenv = require('dotenv');
 dotenv.config();
 
+const ingredientsWithFixedIds = {
+  "chicken": "0EwX5m2jEsRpWwQPLZFq",
+  "calamansi": "1fqZPNPEaRiftMEG77Pa",
+  "chili": "27c1CvFMG5kA4PoooWh3",
+  "carrot": "J5UoHavi60KIw41uGAI5",
+  "onion": "JjG96eQwn3NXdyaK5sa2",
+  "garlic": "RQ16xVV0U9a6CAZgFKbf",
+  "bell pepper": "TzWdAwrf6rrTMSkSOsK2",
+  "potato": "Uv4DlqLxcKbZRCnGXhXX",
+  "cucumber": "VLe7KZhF9GcUqkw9zeUe",
+  "ginger": "hWPZoZF72ul9VD7ShGrI",
+  "tomato": "pzDKhAAGaOtPEIWZejXR",
+  "long chili": "sUDIUiInif3veRqz9dDf",
+  "pig": "xx5rPL1KoxRkENcQspm5"
+};
+
 exports.predictIngredients = async (req, h) => {
   try {
     const userId = req.user ? req.user.user_id : null;
@@ -145,20 +161,31 @@ exports.addIngredient = (db) => async (req, h) => {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
-  const id = nanoid(4);
+  // Tentukan ID berdasarkan nama bahan atau gunakan ID baru jika nama bahan tidak ada di daftar
+  const ingredientId = ingredientsWithFixedIds[name.toLowerCase()] || nanoid(4);
+
   const data = {
-    "userId": userId,
-    "name": name,
-    "amount": amount
-  }
-  
-  const refrigeratorCollection = db_fs.collection('refrigerator');
-  console.log(id, data);
+    name: name,
+    amount: amount,
+    last_update: new Date().toISOString()
+  };
+
+  const db_fs = new Firestore();
+  const userDocRef = db_fs.collection('refrigerator').doc(userId);
+  const ingredientCollectionRef = userDocRef.collection('Ingredient');
+
+  console.log(ingredientId, data);
 
   try {
-    await refrigeratorCollection.doc(id).set(data);
-    return h.response({ ingredient_id: id, message: 'Ingredient added successfully' }).code(201);
+    // Ensure the user document exists
+    await userDocRef.set({ userId: userId }, { merge: true });
+
+    // Add ingredient to the subcollection
+    await ingredientCollectionRef.doc(ingredientId).set(data);
+    
+    return h.response({ ingredient_id: ingredientId, message: 'Ingredient added successfully' }).code(201);
   } catch (error) {
+    console.error('Error adding ingredient:', error);
     return h.response({ error: error.message }).code(500);
   }
 };
@@ -169,94 +196,148 @@ exports.getIngredients = (db) => async (req, h) => {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
+  const db_fs = new Firestore();
+  const ingredientCollectionRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient');
+
   try {
+    const snapshot = await ingredientCollectionRef.get();
+    if (snapshot.empty) {
+      return h.response({ message: 'No ingredients found' }).code(404);
+    }
+    
     const ingredients = [];
-    const snapshot = await db.collection('recipes').get();
-    // const snapshot = await db.collection('ingredients').where('userId', '==', userId).get();
-    snapshot.forEach((doc) => {
+    snapshot.forEach(doc => {
       ingredients.push({ id: doc.id, ...doc.data() });
     });
+    
     return h.response(ingredients).code(200);
   } catch (error) {
+    console.error('Error getting ingredients:', error);
     return h.response({ error: error.message }).code(500);
   }
 };
 
 exports.getIngredientById = (db) => async (req, h) => {
-  const { id } = req.params;
+  // Menggunakan req.params untuk mendapatkan parameter ingredient_id
+  const { ingredient_id } = req.params;
   const userId = req.user ? req.user.user_id : null;
+
   if (!userId) {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
+  console.log('Getting ingredient with ID:', ingredient_id, 'for user ID:', userId);
+
+  const db_fs = new Firestore();
+  const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredient_id);
+
   try {
-    const ingredientDoc = db.collection('ingredients').doc(id);
-    const ingredient = await ingredientDoc.get();
-    if (!ingredient.exists || ingredient.data().userId !== userId) {
+    const doc = await ingredientDocRef.get();
+    if (!doc.exists) {
+      console.log('Ingredient not found:', ingredient_id);
       return h.response({ message: 'Ingredient not found' }).code(404);
     }
-    return h.response(ingredient.data());
+
+    console.log('Ingredient data:', doc.data());
+    return h.response({ id: doc.id, ...doc.data() }).code(200);
   } catch (error) {
+    console.error('Error getting ingredient:', error);
     return h.response({ error: error.message }).code(500);
   }
 };
 
 exports.updateIngredientAmount = (db) => async (req, h) => {
-  const { id } = req.params;
+  const { ingredient_id } = req.params;
   const { amount } = req.payload;
   const userId = req.user ? req.user.user_id : null;
+
   if (!userId) {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
+  console.log('Updating ingredient with ID:', ingredient_id, 'for user ID:', userId, 'with new amount:', amount);
+
+  const db_fs = new Firestore();
+  const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredient_id);
+
   try {
-    const ingredientDoc = db.collection('ingredients').doc(id);
-    const ingredient = await ingredientDoc.get();
-    if (!ingredient.exists || ingredient.data().userId !== userId) {
+    const doc = await ingredientDocRef.get();
+    if (!doc.exists) {
+      console.log('Ingredient not found:', ingredient_id);
       return h.response({ message: 'Ingredient not found' }).code(404);
     }
-    await ingredientDoc.update({ amount });
-    return h.response({ message: 'Ingredient amount updated successfully' });
+
+    await ingredientDocRef.update({ 
+      amount: amount, 
+      last_update: new Date().toISOString()
+    });
+
+    console.log('Ingredient updated:', ingredient_id);
+    return h.response({ message: 'Ingredient amount updated successfully' }).code(200);
   } catch (error) {
+    console.error('Error updating ingredient amount:', error);
     return h.response({ error: error.message }).code(500);
   }
 };
 
 exports.deleteIngredientById = (db) => async (req, h) => {
-  const { id } = req.params;
+  const { ingredient_id } = req.params;
   const userId = req.user ? req.user.user_id : null;
+
   if (!userId) {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
+  console.log('Deleting ingredient with ID:', ingredient_id, 'for user ID:', userId);
+
+  const db_fs = new Firestore();
+  const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredient_id);
+
   try {
-    const ingredientDoc = db.collection('ingredients').doc(id);
-    const ingredient = await ingredientDoc.get();
-    if (!ingredient.exists || ingredient.data().userId !== userId) {
+    const doc = await ingredientDocRef.get();
+    if (!doc.exists) {
+      console.log('Ingredient not found:', ingredient_id);
       return h.response({ message: 'Ingredient not found' }).code(404);
     }
-    await ingredientDoc.delete();
+
+    await ingredientDocRef.delete();
+    console.log('Ingredient deleted:', ingredient_id);
     return h.response({ message: 'Ingredient deleted successfully' }).code(200);
   } catch (error) {
+    console.error('Error deleting ingredient:', error);
     return h.response({ error: error.message }).code(500);
   }
 };
 
 exports.deleteAllIngredients = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
+
   if (!userId) {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
+  console.log('Deleting all ingredients for user ID:', userId);
+
+  const db_fs = new Firestore();
+  const ingredientCollectionRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient');
+
   try {
-    const batch = db.batch();
-    const snapshot = await db.collection('ingredients').where('userId', '==', userId).get();
-    snapshot.forEach((doc) => {
+    const snapshot = await ingredientCollectionRef.get();
+    if (snapshot.empty) {
+      console.log('No ingredients found for user:', userId);
+      return h.response({ message: 'No ingredients found' }).code(404);
+    }
+
+    const batch = db_fs.batch();
+    snapshot.forEach(doc => {
       batch.delete(doc.ref);
     });
     await batch.commit();
+
+    console.log('All ingredients deleted for user ID:', userId);
     return h.response({ message: 'All ingredients deleted successfully' }).code(200);
   } catch (error) {
+    console.error('Error deleting all ingredients:', error);
     return h.response({ error: error.message }).code(500);
   }
 };
