@@ -177,7 +177,8 @@ exports.addIngredient = (db) => async (req, h) => {
 };
 
 exports.addMultipleIngredients = (db) => async (req, h) => {
-  const { ingredients } = req.payload;
+  console.log(JSON.parse(req.payload.ingredients))
+  const { ingredients } = JSON.parse(req.payload);
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
@@ -190,7 +191,7 @@ exports.addMultipleIngredients = (db) => async (req, h) => {
   try {
     // Ensure the user document exists in the refrigerator collection
     await userDocRef.set({ userId: userId }, { merge: true });
-    const ingrideinstIdList = []
+    const ingridientsIdList = []
     for (const ingredient of ingredients) {
       const ingredientId = ingredientsWithFixedIds[ingredient.name.toLowerCase()] || nanoid(4);
       const data = {
@@ -201,11 +202,11 @@ exports.addMultipleIngredients = (db) => async (req, h) => {
 
       const ingredientDocRef = userDocRef.collection('Ingredient').doc(ingredientId);
       batch.set(ingredientDocRef, data);
-      ingrideinstIdList.push(ingredientId);
+      ingridientsIdList.push(ingredientId);
     }
 
     await batch.commit();
-    return h.response({ error: false, message: 'Ingredients added successfully', ingredients: ingrideinstIdList }).code(201);
+    return h.response({ error: false, message: 'Ingredients added successfully', ingredients: ingridientsIdList }).code(201);
   } catch (error) {
     console.error('Error adding ingredients:', error);
     return h.response({ error: true, message: error.message }).code(500);
@@ -302,6 +303,35 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
     return h.response({ error: true, message: error.message }).code(500);
   }
 };
+
+exports.updateMultipleIngredientsAmount = (db) => async (req, h) => {
+  const { ingredients } = JSON.parse(req.payload);
+  const userId = req.user ? req.user.user_id : null;
+
+  if (!userId) {
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
+  }
+
+  const userDocRef = db_fs.collection('refrigerator').doc(userId);
+  const batch = db_fs.batch();
+
+  try {
+    for (const ingredient of ingredients) {
+      const ingredientId = ingredient.id;
+      const amount = ingredient.amount;
+
+      const ingredientDocRef = userDocRef.collection('Ingredient').doc(ingredientId);
+      batch.update(ingredientDocRef, { amount: parseInt(amount, 10), last_update: new Date().toISOString() });
+    }
+
+    await batch.commit();
+    return h.response({ error: false, message: 'Ingredients amount updated successfully' }).code(200);
+
+  } catch (error) {
+    console.error('Error updating ingredients amount:', error);
+    return h.response({ error: true, message: error.message }).code(500);
+  }
+}
 
 exports.deleteIngredientById = (db) => async (req, h) => {
   const { ingredient_id } = req.params;

@@ -95,6 +95,21 @@ module.exports = (db) => {
           handler: ingredientController.updateIngredientAmount(db)
         },
         {
+          method: 'PUT',
+          path: 'ingredients/amountmany/',
+          options: {
+            payload: {
+              maxBytes: 10485760,
+              output: 'stream',
+              parse: true,
+              allow: 'multipart/form-data',
+              multipart: true
+            },
+            pre: [auth]
+          },
+          handler: ingredientController.updateMultipleIngredientsAmount(db)
+        },
+        {
           method: 'DELETE',
           path: '/ingredients/{ingredient_id}',
           options: { pre: [auth] },
