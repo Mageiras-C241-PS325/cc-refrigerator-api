@@ -135,16 +135,21 @@ exports.addIngredient = (db) => async (req, h) => {
 
   const ingredientId = ingredientsWithFixedIds[name.toLowerCase()] || nanoid(4);
   const data = {
-    userId,
     name,
     amount: parseInt(amount, 10),
     last_update: new Date().toISOString()
   };
 
-  const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredientId);
+  const userDocRef = db_fs.collection('refrigerator').doc(userId);
+  const ingredientDocRef = userDocRef.collection('Ingredient').doc(ingredientId);
 
   try {
+    // Ensure the user document exists in the refrigerator collection
+    await userDocRef.set({ userId: userId }, { merge: true });
+
+    // Add ingredient to the Ingredient subcollection
     await ingredientDocRef.set(data);
+
     return h.response({ ingredient_id: ingredientId, message: 'Ingredient added successfully' }).code(201);
   } catch (error) {
     console.error('Error adding ingredient:', error);
