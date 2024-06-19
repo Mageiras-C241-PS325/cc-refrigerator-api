@@ -5,9 +5,6 @@ const { nanoid } = require('nanoid');
 const { Firestore } = require('@google-cloud/firestore');
 const db_fs = new Firestore();
 
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
-
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -105,7 +102,7 @@ exports.recommendMenu = async (req, h) => {
 
     // Get a reference to the user's refrigerator document
     const refrigeratorDocRef = db_fs.collection('refrigerator').doc(userId);
-    
+
     // Get all ingredients from the user's refrigerator
     const userIngredientsSnapshot = await refrigeratorDocRef.collection('Ingredient').get();
     if (userIngredientsSnapshot.empty) {
@@ -178,7 +175,7 @@ exports.addIngredient = (db) => async (req, h) => {
 
     // Add ingredient to the subcollection
     await ingredientCollectionRef.doc(ingredientId).set(data);
-    
+
     return h.response({ ingredient_id: ingredientId, message: 'Ingredient added successfully' }).code(201);
   } catch (error) {
     console.error('Error adding ingredient:', error);
@@ -200,12 +197,12 @@ exports.getIngredients = (db) => async (req, h) => {
     if (snapshot.empty) {
       return h.response({ message: 'No ingredients found' }).code(404);
     }
-    
+
     const ingredients = [];
     snapshot.forEach(doc => {
       ingredients.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return h.response(ingredients).code(200);
   } catch (error) {
     console.error('Error getting ingredients:', error);
@@ -263,8 +260,8 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
       return h.response({ message: 'Ingredient not found' }).code(404);
     }
 
-    await ingredientDocRef.update({ 
-      amount: amount, 
+    await ingredientDocRef.update({
+      amount: amount,
       last_update: new Date().toISOString()
     });
 
