@@ -27,12 +27,12 @@ exports.predictIngredients = async (req, h) => {
     const userId = req.user ? req.user.user_id : null;
 
     if (!userId) {
-      return h.response({ error: 'User not authenticated' }).code(401);
+      return h.response({ error: true, message: 'User not authenticated' }).code(401);
     }
 
     const file = req.payload.file;
     if (!file) {
-      return h.response({ error: 'No image file provided' }).code(400);
+      return h.response({ error: true, message: 'No image file provided' }).code(400);
     }
 
     const formData = new FormData();
@@ -44,7 +44,7 @@ exports.predictIngredients = async (req, h) => {
     });
 
     if (djangoResponse.status !== 200) {
-      return h.response({ error: 'Failed to recognize image' }).code(500);
+      return h.response({ error: true, message: 'Failed to recognize image' }).code(500);
     }
 
     const predictedIngredients = djangoResponse.data.prediction;
@@ -86,13 +86,13 @@ exports.predictIngredients = async (req, h) => {
     }
 
     await batch.commit();
-    return h.response({ message: 'Ingredient prediction and update successful', predictions: predictedIngredients }).code(200);
+    return h.response({ error: false, message: 'Ingredient prediction and update successful', predictions: predictedIngredients }).code(200);
   } catch (error) {
     if (error.code === 'ECONNRESET') {
-      return h.response({ error: 'Connection to the Django API was reset' }).code(500);
+      return h.response({ error: true, message: 'Connection to the Django API was reset' }).code(500);
     }
     console.error('Error in predictIngredients:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 };
 
@@ -101,13 +101,13 @@ exports.recommendMenu = async (req, h) => {
     const userId = req.user ? req.user.user_id : null;
 
     if (!userId) {
-      return h.response({ error: 'User not authenticated' }).code(401);
+      return h.response({ error: true, message: 'User not authenticated' }).code(401);
     }
 
     const refrigeratorDocRef = db_fs.collection('refrigerator').doc(userId);
     const userIngredientsSnapshot = await refrigeratorDocRef.collection('Ingredient').get();
     if (userIngredientsSnapshot.empty) {
-      return h.response({ message: 'No ingredients found in the refrigerator' }).code(404);
+      return h.response({ error: true, message: 'No ingredients found in the refrigerator' }).code(404);
     }
 
     const userIngredients = userIngredientsSnapshot.docs.map(doc => doc.data().name.toLowerCase());
@@ -134,13 +134,13 @@ exports.recommendMenu = async (req, h) => {
     });
 
     if (recipes.length === 0) {
-      return h.response({ message: 'No recipes found' }).code(404);
+      return h.response({ error: false, message: 'No recipes found' }).code(200);
     }
 
-    return h.response(recipes).code(200);
+    return h.response({ error: false, message: 'Recipes returned succesfully', recipes: recipes }).code(200);
   } catch (error) {
     console.error('Error in recommendMenu:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 };
 
@@ -149,7 +149,7 @@ exports.addIngredient = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
-    return h.response({ error: 'User not authenticated' }).code(401);
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
   }
 
   const ingredientId = ingredientsWithFixedIds[name.toLowerCase()] || nanoid(4);
@@ -169,10 +169,10 @@ exports.addIngredient = (db) => async (req, h) => {
     // Add ingredient to the Ingredient subcollection
     await ingredientDocRef.set(data);
 
-    return h.response({ ingredient_id: ingredientId, message: 'Ingredient added successfully' }).code(201);
+    return h.response({ error: false, message: 'Ingredient added successfully', ingredient_id: ingredientId }).code(201);
   } catch (error) {
     console.error('Error adding ingredient:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 };
 
@@ -181,7 +181,7 @@ exports.addMultipleIngredients = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
-    return h.response({ error: 'User not authenticated' }).code(401);
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
   }
 
   const userDocRef = db_fs.collection('refrigerator').doc(userId);
@@ -190,7 +190,7 @@ exports.addMultipleIngredients = (db) => async (req, h) => {
   try {
     // Ensure the user document exists in the refrigerator collection
     await userDocRef.set({ userId: userId }, { merge: true });
-
+    const ingrideinstIdList = []
     for (const ingredient of ingredients) {
       const ingredientId = ingredientsWithFixedIds[ingredient.name.toLowerCase()] || nanoid(4);
       const data = {
@@ -201,20 +201,21 @@ exports.addMultipleIngredients = (db) => async (req, h) => {
 
       const ingredientDocRef = userDocRef.collection('Ingredient').doc(ingredientId);
       batch.set(ingredientDocRef, data);
+      ingrideinstIdList.push(ingredientId);
     }
 
     await batch.commit();
-    return h.response({ message: 'Ingredients added successfully' }).code(201);
+    return h.response({ error: false, message: 'Ingredients added successfully', ingredients: ingrideinstIdList }).code(201);
   } catch (error) {
     console.error('Error adding ingredients:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 }
 
 exports.getIngredients = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
   if (!userId) {
-    return h.response({ error: 'User not authenticated' }).code(401);
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
   }
 
   const ingredientCollectionRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient');
@@ -222,7 +223,11 @@ exports.getIngredients = (db) => async (req, h) => {
   try {
     const snapshot = await ingredientCollectionRef.get();
     if (snapshot.empty) {
-      return h.response({ message: 'No ingredients found' }).code(404);
+      return h.response({
+        error: false,
+        message: 'No ingredients found',
+        ingredients: [],
+      }).code(201);
     }
 
     const ingredients = [];
@@ -230,10 +235,14 @@ exports.getIngredients = (db) => async (req, h) => {
       ingredients.push({ id: doc.id, ...doc.data() });
     });
 
-    return h.response({ ingredients: ingredients }).code(200);
+    return h.response({
+      error: false,
+      message: 'No ingredients found',
+      ingredients: ingredients,
+    }).code(200);
   } catch (error) {
     console.error('Error getting ingredients:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 };
 
@@ -242,7 +251,7 @@ exports.getIngredientById = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
-    return h.response({ error: 'User not authenticated' }).code(401);
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
   }
 
   console.log('Getting ingredient with ID:', ingredient_id, 'for user ID:', userId);
@@ -253,7 +262,7 @@ exports.getIngredientById = (db) => async (req, h) => {
     const doc = await ingredientDocRef.get();
     if (!doc.exists) {
       console.log('Ingredient not found:', ingredient_id);
-      return h.response({ message: 'Ingredient not found' }).code(404);
+      return h.response({ error: true, message: 'Ingredient not found' }).code(404);
     }
 
     console.log('Ingredient data:', doc.data());
@@ -270,7 +279,7 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
-    return h.response({ error: 'User not authenticated' }).code(401);
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
   }
 
   console.log('Updating ingredient with ID:', ingredient_id, 'for user ID:', userId, 'with new amount:', amount);
@@ -281,16 +290,16 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
     const doc = await ingredientDocRef.get();
     if (!doc.exists) {
       console.log('Ingredient not found:', ingredient_id);
-      return h.response({ message: 'Ingredient not found' }).code(404);
+      return h.response({ error: true, message: 'Ingredient not found' }).code(404);
     }
 
     await ingredientDocRef.update({ amount: parseInt(amount, 10), last_update: new Date().toISOString() });
 
     console.log('Ingredient updated:', ingredient_id);
-    return h.response({ message: 'Ingredient amount updated successfully' }).code(200);
+    return h.response({ error: false, message: 'Ingredient amount updated successfully' }).code(200);
   } catch (error) {
     console.error('Error updating ingredient amount:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 };
 
@@ -299,7 +308,7 @@ exports.deleteIngredientById = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
-    return h.response({ error: 'User not authenticated' }).code(401);
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
   }
 
   console.log('Deleting ingredient with ID:', ingredient_id, 'for user ID:', userId);
@@ -310,15 +319,15 @@ exports.deleteIngredientById = (db) => async (req, h) => {
     const doc = await ingredientDocRef.get();
     if (!doc.exists) {
       console.log('Ingredient not found:', ingredient_id);
-      return h.response({ message: 'Ingredient not found' }).code(404);
+      return h.response({ error: true, message: 'Ingredient not found' }).code(404);
     }
 
     await ingredientDocRef.delete();
     console.log('Ingredient deleted:', ingredient_id);
-    return h.response({ message: 'Ingredient deleted successfully' }).code(200);
+    return h.response({ error: false, message: 'Ingredient deleted successfully' }).code(200);
   } catch (error) {
     console.error('Error deleting ingredient:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 };
 
@@ -326,7 +335,7 @@ exports.deleteAllIngredients = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
 
   if (!userId) {
-    return h.response({ error: 'User not authenticated' }).code(401);
+    return h.response({ error: true, message: 'User not authenticated' }).code(401);
   }
 
   console.log('Deleting all ingredients for user ID:', userId);
@@ -337,7 +346,7 @@ exports.deleteAllIngredients = (db) => async (req, h) => {
     const snapshot = await ingredientCollectionRef.get();
     if (snapshot.empty) {
       console.log('No ingredients found for user:', userId);
-      return h.response({ message: 'No ingredients found' }).code(404);
+      return h.response({ error: true, message: 'No ingredients found' }).code(404);
     }
 
     const batch = db_fs.batch();
@@ -347,9 +356,9 @@ exports.deleteAllIngredients = (db) => async (req, h) => {
     await batch.commit();
 
     console.log('All ingredients deleted for user ID:', userId);
-    return h.response({ message: 'All ingredients deleted successfully' }).code(200);
+    return h.response({ error: false, message: 'All ingredients deleted successfully' }).code(200);
   } catch (error) {
     console.error('Error deleting all ingredients:', error);
-    return h.response({ error: error.message }).code(500);
+    return h.response({ error: true, message: error.message }).code(500);
   }
 };

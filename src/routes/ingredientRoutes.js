@@ -10,7 +10,7 @@ module.exports = (db) => {
         {
           method: 'POST',
           path: '/predict',
-          options: { 
+          options: {
             payload: {
               maxBytes: 10485760, // 10MB
               output: 'stream',
@@ -25,7 +25,7 @@ module.exports = (db) => {
         {
           method: 'POST',
           path: '/recommend',
-          options: { 
+          options: {
             payload: {
               maxBytes: 10485760, // 10MB
               output: 'stream',
@@ -40,7 +40,7 @@ module.exports = (db) => {
         {
           method: 'POST',
           path: '/ingredients/add',
-          options: { 
+          options: {
             payload: {
               maxBytes: 10485760,
               output: 'stream',
@@ -51,6 +51,21 @@ module.exports = (db) => {
             pre: [auth]
           },
           handler: ingredientController.addIngredient(db)
+        },
+        {
+          method: 'POST',
+          path: '/ingredients/addmany',
+          options: {
+            payload: {
+              maxBytes: 10485760,
+              output: 'stream',
+              parse: true,
+              allow: 'multipart/form-data',
+              multipart: true
+            },
+            pre: [auth]
+          },
+          handler: ingredientController.addMultipleIngredients(db)
         },
         {
           method: 'GET',
@@ -67,7 +82,7 @@ module.exports = (db) => {
         {
           method: 'PUT',
           path: '/ingredients/amount/{ingredient_id}',
-          options: { 
+          options: {
             payload: {
               maxBytes: 10485760,
               output: 'stream',
