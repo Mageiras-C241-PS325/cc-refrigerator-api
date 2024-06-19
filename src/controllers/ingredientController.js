@@ -37,7 +37,6 @@ exports.predictIngredients = async (req, h) => {
 
     // Step 1: Accept image file from frontend
     const file = req.payload.file;
-    console.log(file);
     if (!file) {
       return h.response({ error: 'No image file provided' }).code(400);
     }
@@ -51,31 +50,21 @@ exports.predictIngredients = async (req, h) => {
       headers: formData.getHeaders()
     });
 
-    console.log('API Response:', djangoResponse.data);
     if (djangoResponse.status !== 200) {
       return h.response({ error: 'Failed to recognize image' }).code(500);
     }
 
-    const id = nanoid(4);
     const predictedIngredients = djangoResponse.data.ingredients;
-    
+
     // Get a reference to the user's refrigerator document
-    const refrigeratorCollection = db_fs.collection('refrigerators').doc(userId);
-    
-    // Get the user's refrigerator document
-    const userDoc = await refrigeratorCollection.get();
-    if (!userDoc.exists) {
-      throw new Error('User refrigerator document not found');
-    }
+    const refrigeratorCollection = db_fs.collection('refrigerator').doc(userId);
+    const userIngredientsRef = refrigeratorCollection.collection('Ingredient');
 
-    // Get a reference to the user ingredients collection
-    const userIngredientsRef = refrigeratorCollection.collection('user_ingredients');
-
-    // Start a Firestore transaction
-    const batch = db.batch();
+    // Start a Firestore batch
+    const batch = db_fs.batch();
 
     // Iterate over the ingredients to update
-    for (const ingredientName in predictedIngredients) {
+    for (const ingredientName of predictedIngredients) {
       // Count the number of times the ingredient appears in the array
       const ingredientAmount = predictedIngredients.filter(name => name === ingredientName).length;
 
@@ -84,24 +73,23 @@ exports.predictIngredients = async (req, h) => {
       if (!ingredientQuery.empty) {
         // If the ingredient exists, update its amount
         const ingredientDoc = ingredientQuery.docs[0];
-        batch.update(ingredientDoc.ref, { amount: ingredientAmount });
+        batch.update(ingredientDoc.ref, { amount: ingredientAmount, last_update: new Date().toISOString() });
       } else {
         // If the ingredient doesn't exist, add it to the user's ingredients collection
         const newIngredientDocRef = userIngredientsRef.doc();
-        batch.set(newIngredientDocRef, { name: ingredientName, amount: ingredientAmount });
+        batch.set(newIngredientDocRef, { name: ingredientName, amount: ingredientAmount, last_update: new Date().toISOString() });
       }
     }
 
     // Commit the batched writes
     await batch.commit();
-    
-    console.log(id, predictedIngredients);
-    return h.response({ ingredient_id: id, message: 'Ingredient added successfully' }).code(201);
+
+    return h.response({ message: 'Ingredient prediction and update successful', predictions: predictedIngredients }).code(200);
   } catch (error) {
     if (error.code === 'ECONNRESET') {
       return h.response({ error: 'Connection to the Django API was reset' }).code(500);
     }
-    
+
     console.error('Error in predictIngredients:', error);
     return h.response({ error: error.message }).code(500);
   }
@@ -116,31 +104,39 @@ exports.recommendMenu = async (req, h) => {
     }
 
     // Get a reference to the user's refrigerator document
-    const refrigeratorCollection = db.collection('refrigerators').doc(userId);
+    const refrigeratorDocRef = db_fs.collection('refrigerator').doc(userId);
     
-    // Get the user's refrigerator document
-    const userDoc = await refrigeratorCollection.get();
-    if (!userDoc.exists) {
-      throw new Error('User refrigerator document not found');
+    // Get all ingredients from the user's refrigerator
+    const userIngredientsSnapshot = await refrigeratorDocRef.collection('Ingredient').get();
+    if (userIngredientsSnapshot.empty) {
+      return h.response({ message: 'No ingredients found in the refrigerator' }).code(404);
     }
 
-    // Perform full-text search in Firestore
+    const userIngredients = userIngredientsSnapshot.docs.map(doc => doc.data().name.toLowerCase());
     const recipeCollection = db_fs.collection('recipes');
     let recipes = [];
 
-    // Get all ingredients from the user's refrigerator
-    const userIngredientsSnapshot = await refrigeratorCollection.collection('user_ingredients').get();
-    const userIngredients = userIngredientsSnapshot.docs.map(doc => doc.data().name);
-
     // Perform a full-text search for recipes based on the user's ingredients
-    for (const ingredient of userIngredients) {
-      const querySnapshot = await recipesRef.where('ingredients', 'array-contains', ingredient).get();
-      querySnapshot.forEach(doc => {
-        recipes.push({ id: doc.id, ...doc.data() });
-      });
-    }
+    const allRecipesSnapshot = await recipeCollection.get();
+    allRecipesSnapshot.forEach(doc => {
+      const recipe = doc.data();
+      const recipeIngredients = recipe.ingredients.toLowerCase().split(';');
 
-    if (querySnapshot.empty) {
+      const hasAllIngredients = userIngredients.every(ingredient => recipeIngredients.includes(ingredient));
+      if (hasAllIngredients) {
+        recipes.push({
+          id: doc.id,
+          title: recipe.title,
+          directions: recipe.directions,
+          genre: recipe.genre,
+          image_url: recipe.image_url,
+          ingredients: recipe.ingredients,
+          label: recipe.label
+        });
+      }
+    });
+
+    if (recipes.length === 0) {
       return h.response({ message: 'No recipes found' }).code(404);
     }
 
