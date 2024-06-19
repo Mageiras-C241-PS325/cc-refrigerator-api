@@ -11,15 +11,29 @@ module.exports = (db) => {
           method: 'POST',
           path: '/predict',
           options: { 
-            pre: [auth],
             payload: {
               maxBytes: 10485760, // 10MB
               output: 'stream',
               parse: true,
-              allow: 'multipart/form-data'
+              allow: 'multipart/form-data',
+              multipart: true
             }
           },
           handler: ingredientController.predictIngredients
+        },
+        {
+          method: 'POST',
+          path: '/recommend',
+          options: { 
+            payload: {
+              maxBytes: 10485760, // 10MB
+              output: 'stream',
+              parse: true,
+              allow: 'multipart/form-data',
+              multipart: true
+            }
+          },
+          handler: ingredientController.recommendMenu
         },
         {
           method: 'POST',

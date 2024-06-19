@@ -1,106 +1,138 @@
 const axios = require('axios');
 const FormData = require('form-data');
-const { Firestore } = require('@google-cloud/firestore');
 const { nanoid } = require('nanoid');
+
+const { Firestore } = require('@google-cloud/firestore');
+const db_fs = new Firestore();
+
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 const dotenv = require('dotenv');
 dotenv.config();
 
-exports.getRecipeDataset = (db) => async (req, h) => {
+exports.predictIngredients = async (req, h) => {
   try {
-    const recipeCollection = db.collection('recipes');
-    const snapshot = await recipeCollection.get();
-    if (snapshot.empty) {
+    const userId = req.user ? req.user.user_id : null;
+
+    if (!userId) {
+      return h.response({ error: 'User not authenticated' }).code(401);
+    }
+
+    // Step 1: Accept image file from frontend
+    const file = req.payload.file;
+    console.log(file);
+    if (!file) {
+      return h.response({ error: 'No image file provided' }).code(400);
+    }
+
+    // Step 2: Pass the image to Django API for recognition
+    const formData = new FormData();
+    formData.append('file', file._data, file.hapi.filename);
+    const djangoApiUrl = process.env.DJANGO_API_ENDPOINT;
+
+    const djangoResponse = await axios.post(djangoApiUrl, formData, {
+      headers: formData.getHeaders()
+    });
+
+    console.log('API Response:', djangoResponse.data);
+    if (djangoResponse.status !== 200) {
+      return h.response({ error: 'Failed to recognize image' }).code(500);
+    }
+
+    const id = nanoid(4);
+    const predictedIngredients = djangoResponse.data.ingredients;
+    
+    // Get a reference to the user's refrigerator document
+    const refrigeratorCollection = db_fs.collection('refrigerators').doc(userId);
+    
+    // Get the user's refrigerator document
+    const userDoc = await refrigeratorCollection.get();
+    if (!userDoc.exists) {
+      throw new Error('User refrigerator document not found');
+    }
+
+    // Get a reference to the user ingredients collection
+    const userIngredientsRef = refrigeratorCollection.collection('user_ingredients');
+
+    // Start a Firestore transaction
+    const batch = db.batch();
+
+    // Iterate over the ingredients to update
+    for (const ingredientName in predictedIngredients) {
+      // Count the number of times the ingredient appears in the array
+      const ingredientAmount = predictedIngredients.filter(name => name === ingredientName).length;
+
+      // Check if the ingredient exists in the user's ingredients collection
+      const ingredientQuery = await userIngredientsRef.where('name', '==', ingredientName).get();
+      if (!ingredientQuery.empty) {
+        // If the ingredient exists, update its amount
+        const ingredientDoc = ingredientQuery.docs[0];
+        batch.update(ingredientDoc.ref, { amount: ingredientAmount });
+      } else {
+        // If the ingredient doesn't exist, add it to the user's ingredients collection
+        const newIngredientDocRef = userIngredientsRef.doc();
+        batch.set(newIngredientDocRef, { name: ingredientName, amount: ingredientAmount });
+      }
+    }
+
+    // Commit the batched writes
+    await batch.commit();
+    
+    console.log(id, predictedIngredients);
+    return h.response({ ingredient_id: id, message: 'Ingredient added successfully' }).code(201);
+  } catch (error) {
+    if (error.code === 'ECONNRESET') {
+      return h.response({ error: 'Connection to the Django API was reset' }).code(500);
+    }
+    
+    console.error('Error in predictIngredients:', error);
+    return h.response({ error: error.message }).code(500);
+  }
+};
+
+exports.recommendMenu = async (req, h) => {
+  try {
+    const userId = req.user ? req.user.user_id : null;
+
+    if (!userId) {
+      return h.response({ error: 'User not authenticated' }).code(401);
+    }
+
+    // Get a reference to the user's refrigerator document
+    const refrigeratorCollection = db.collection('refrigerators').doc(userId);
+    
+    // Get the user's refrigerator document
+    const userDoc = await refrigeratorCollection.get();
+    if (!userDoc.exists) {
+      throw new Error('User refrigerator document not found');
+    }
+
+    // Perform full-text search in Firestore
+    const recipeCollection = db_fs.collection('recipes');
+    let recipes = [];
+
+    // Get all ingredients from the user's refrigerator
+    const userIngredientsSnapshot = await refrigeratorCollection.collection('user_ingredients').get();
+    const userIngredients = userIngredientsSnapshot.docs.map(doc => doc.data().name);
+
+    // Perform a full-text search for recipes based on the user's ingredients
+    for (const ingredient of userIngredients) {
+      const querySnapshot = await recipesRef.where('ingredients', 'array-contains', ingredient).get();
+      querySnapshot.forEach(doc => {
+        recipes.push({ id: doc.id, ...doc.data() });
+      });
+    }
+
+    if (querySnapshot.empty) {
       return h.response({ message: 'No recipes found' }).code(404);
     }
-    let recipes = [];
-    snapshot.forEach(doc => {
-      recipes.push({ id: doc.id, ...doc.data() });
-    });
+
+    // Return the recipes
     return h.response(recipes).code(200);
+
   } catch (error) {
-    console.error('Error getting recipes:', error);
-    return h.response({ error: error.message }).code(500);
-  }
-};
-
-exports.addRecipe = (db) => async (req, h) => {
-  const { title, genre, label, directions, ingredients } = req.payload;
-  try {
-    const recipeDoc = db.collection('recipes').doc();
-    await recipeDoc.set({ title, genre, label, directions, ingredients });
-    return h.response({ message: 'Recipe added successfully' }).code(201);
-  } catch (error) {
-    return h.response({ error: error.message }).code(500);
-  }
-};
-
-exports.updateRecipe = (db) => async (req, h) => {
-  const { id } = req.params;
-  const { title, genre, label, directions, ingredients } = req.payload;
-  try {
-    const recipeDoc = db.collection('recipes').doc(id);
-    const recipe = await recipeDoc.get();
-    if (!recipe.exists) {
-      return h.response({ message: 'Recipe not found' }).code(404);
-    }
-    await recipeDoc.update({ title, genre, label, directions, ingredients });
-    return h.response({ message: 'Recipe updated successfully' }).code(200);
-  } catch (error) {
-    return h.response({ error: error.message }).code(500);
-  }
-};
-
-exports.deleteRecipe = (db) => async (req, h) => {
-  const { id } = req.params;
-  try {
-    const recipeDoc = db.collection('recipes').doc(id);
-    const recipe = await recipeDoc.get();
-    if (!recipe.exists) {
-      return h.response({ message: 'Recipe not found' }).code(404);
-    }
-    await recipeDoc.delete();
-    return h.response({ message: 'Recipe deleted successfully' }).code(200);
-  } catch (error) {
-    return h.response({ error: error.message }).code(500);
-  }
-};
-
-exports.predictIngredients = async (req, h) => {
-  const fileType = await import('file-type');
-  
-  try {
-    const { file } = req.payload;
-    let imageBuffer;
-    let fileName;
-
-    if (file && file._data && Buffer.isBuffer(file._data)) {
-      // Handle file upload
-      imageBuffer = file._data;
-      const { ext } = await fileType.fromBuffer(imageBuffer);
-      if (!['jpg', 'jpeg', 'png'].includes(ext)) {
-        return h.response({ error: 'Invalid image format. Only jpg, jpeg, and png are allowed.' }).code(400);
-      }
-      fileName = `image_${Date.now()}.${ext}`;
-    } else {
-      return h.response({ error: 'File is missing or not a valid image' }).code(400);
-    }
-
-    const formData = new FormData();
-    formData.append('file', imageBuffer, {
-      filename: fileName,
-      contentType: 'image/jpeg',
-    });
-
-    const response = await axios.post(process.env.DJANGO_API_ENDPOINT, formData, {
-      headers: {
-        ...formData.getHeaders(),
-      },
-    });
-
-    return h.response({ message: 'File uploaded successfully', data: response.data }).code(200);
-  } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('Error in recommendMenu:', error);
     return h.response({ error: error.message }).code(500);
   }
 };
@@ -120,9 +152,7 @@ exports.addIngredient = (db) => async (req, h) => {
     "amount": amount
   }
   
-  const db_fs = new Firestore();
   const refrigeratorCollection = db_fs.collection('refrigerator');
-
   console.log(id, data);
 
   try {
