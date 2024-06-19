@@ -17,7 +17,8 @@ module.exports = (db) => {
               parse: true,
               allow: 'multipart/form-data',
               multipart: true
-            }
+            },
+            pre: [auth]
           },
           handler: ingredientController.predictIngredients
         },
@@ -31,14 +32,24 @@ module.exports = (db) => {
               parse: true,
               allow: 'multipart/form-data',
               multipart: true
-            }
+            },
+            pre: [auth]
           },
           handler: ingredientController.recommendMenu
         },
         {
           method: 'POST',
           path: '/ingredients/add',
-          options: { pre: [auth] },
+          options: { 
+            payload: {
+              maxBytes: 10485760,
+              output: 'stream',
+              parse: true,
+              allow: 'multipart/form-data',
+              multipart: true
+            },
+            pre: [auth]
+          },
           handler: ingredientController.addIngredient(db)
         },
         {
@@ -56,7 +67,16 @@ module.exports = (db) => {
         {
           method: 'PUT',
           path: '/ingredients/amount/{ingredient_id}',
-          options: { pre: [auth] },
+          options: { 
+            payload: {
+              maxBytes: 10485760,
+              output: 'stream',
+              parse: true,
+              allow: 'multipart/form-data',
+              multipart: true
+            },
+            pre: [auth]
+          },
           handler: ingredientController.updateIngredientAmount(db)
         },
         {

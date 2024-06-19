@@ -5,9 +5,6 @@ const { nanoid } = require('nanoid');
 const { Firestore } = require('@google-cloud/firestore');
 const db_fs = new Firestore();
 
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
-
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -157,28 +154,19 @@ exports.addIngredient = (db) => async (req, h) => {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
-  // Tentukan ID berdasarkan nama bahan atau gunakan ID baru jika nama bahan tidak ada di daftar
   const ingredientId = ingredientsWithFixedIds[name.toLowerCase()] || nanoid(4);
-
   const data = {
-    name: name,
-    amount: amount,
+    userId,
+    name,
+    amount: parseInt(amount, 10),
     last_update: new Date().toISOString()
   };
 
   const db_fs = new Firestore();
-  const userDocRef = db_fs.collection('refrigerator').doc(userId);
-  const ingredientCollectionRef = userDocRef.collection('Ingredient');
-
-  console.log(ingredientId, data);
+  const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredientId);
 
   try {
-    // Ensure the user document exists
-    await userDocRef.set({ userId: userId }, { merge: true });
-
-    // Add ingredient to the subcollection
-    await ingredientCollectionRef.doc(ingredientId).set(data);
-    
+    await ingredientDocRef.set(data);
     return h.response({ ingredient_id: ingredientId, message: 'Ingredient added successfully' }).code(201);
   } catch (error) {
     console.error('Error adding ingredient:', error);
@@ -263,10 +251,7 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
       return h.response({ message: 'Ingredient not found' }).code(404);
     }
 
-    await ingredientDocRef.update({ 
-      amount: amount, 
-      last_update: new Date().toISOString()
-    });
+    await ingredientDocRef.update({ amount: parseInt(amount, 10), last_update: new Date().toISOString() });
 
     console.log('Ingredient updated:', ingredient_id);
     return h.response({ message: 'Ingredient amount updated successfully' }).code(200);
