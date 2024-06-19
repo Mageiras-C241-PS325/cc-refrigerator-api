@@ -36,7 +36,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"email\": \"sepatu@rak.com\",\r\n  \"password\": \"kaoskaki\",\r\n  \"username\": \"kaki\"\r\n}\r\n",
+					"raw": "{\r\n  \"email\": \"makanan@piring.keramik\",\r\n  \"password\": \"mageiras\",\r\n  \"username\": \"mag\"\r\n}\r\n",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -44,10 +44,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://{{dev_ip}}/register",
+					"raw": "http://{{cc_ip}}/register",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"register"
@@ -96,8 +96,19 @@
 				"method": "POST",
 				"header": [],
 				"body": {
-					"mode": "raw",
-					"raw": "{\r\n  \"email\": \"sepatu@rak.com\",\r\n  \"password\": \"kaoskaki\"\r\n}\r\n",
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "email",
+							"value": "makanan@piring.keramik",
+							"type": "default"
+						},
+						{
+							"key": "password",
+							"value": "mageiras",
+							"type": "default"
+						}
+					],
 					"options": {
 						"raw": {
 							"language": "json"
@@ -105,10 +116,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://{{dev_ip}}/login",
+					"raw": "http://{{cc_ip}}/login",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"login"
@@ -143,10 +154,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://{{prod_ip}}/ml_api/",
+					"raw": "http://{{ml_ip}}/ml_api/",
 					"protocol": "http",
 					"host": [
-						"{{prod_ip}}"
+						"{{ml_ip}}"
 					],
 					"path": [
 						"ml_api",
@@ -182,15 +193,15 @@
 						{
 							"key": "file",
 							"type": "file",
-							"src": "/E:/Media/Makanan/IMG-20240222-WA0026.jpg"
+							"src": []
 						}
 					]
 				},
 				"url": {
-					"raw": "http://{{prod_ip}}/ml_api/predict_image",
+					"raw": "http://{{ml_ip}}/ml_api/predict_image",
 					"protocol": "http",
 					"host": [
-						"{{prod_ip}}"
+						"{{ml_ip}}"
 					],
 					"path": [
 						"ml_api",
@@ -198,6 +209,124 @@
 					]
 				},
 				"description": "Payload pada request ini adalah image jpeg yang diconvert dalam format base64"
+			},
+			"response": []
+		},
+		{
+			"name": "Predict Ingredients",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('response status code should have 200 value', () => {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test('response body should be an object', () => {\r",
+							"    const responseJson = pm.response.json();\r",
+							"    pm.expect(responseJson).to.be.an('object');\r",
+							"});\r",
+							"\r",
+							"pm.test('response body should have correct property and value', () => {\r",
+							"    const responseJson = pm.response.json();\r",
+							"    pm.expect(responseJson).to.ownProperty('message');\r",
+							"    pm.expect(responseJson).to.ownProperty('predictions');\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "http://{{cc_ip}}/predict",
+					"protocol": "http",
+					"host": [
+						"{{cc_ip}}"
+					],
+					"path": [
+						"predict"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recommend Menu",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('response status code should have 200 value', () => {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test('response body should be an object', () => {\r",
+							"    const responseJson = pm.response.json();\r",
+							"    pm.expect(responseJson).to.be.an('object');\r",
+							"});\r",
+							"\r",
+							"pm.test('response body should have correct property and value', () => {\r",
+							"    const responseJson = pm.response.json();\r",
+							"    pm.expect(responseJson).to.ownProperty('message');\r",
+							"    pm.expect(responseJson).to.ownProperty('recipes');\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://{{cc_ip}}/recommend",
+					"protocol": "http",
+					"host": [
+						"{{cc_ip}}"
+					],
+					"path": [
+						"recommend"
+					]
+				}
 			},
 			"response": []
 		},
@@ -222,7 +351,7 @@
 							"    pm.expect(responseJson).to.ownProperty('message');\r",
 							"    pm.expect(responseJson.message).to.equals('Ingredient added successfully');\r",
 							"\r",
-							"    pm.environment.set(\"ingredient_id\", responseJson.id);\r",
+							"    pm.environment.set(\"ingredient_id\", responseJson.ingredient_id);\r",
 							"});"
 						],
 						"type": "text/javascript"
@@ -243,8 +372,19 @@
 				"method": "POST",
 				"header": [],
 				"body": {
-					"mode": "raw",
-					"raw": "{\r\n  \"name\": \"lele\",\r\n  \"amount\": 2\r\n}\r\n",
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "name",
+							"value": "tahu",
+							"type": "default"
+						},
+						{
+							"key": "amount",
+							"value": "2",
+							"type": "default"
+						}
+					],
 					"options": {
 						"raw": {
 							"language": "json"
@@ -252,10 +392,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://{{dev_ip}}/ingredients/add",
+					"raw": "http://{{cc_ip}}/ingredients/add",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"ingredients",
@@ -299,10 +439,10 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://{{dev_ip}}/ingredients",
+					"raw": "http://{{cc_ip}}/ingredients",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"ingredients"
@@ -345,10 +485,10 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://{{dev_ip}}/ingredients/{{ingredient_id}}",
+					"raw": "http://{{cc_ip}}/ingredients/{{ingredient_id}}",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"ingredients",
@@ -400,8 +540,14 @@
 				"method": "PUT",
 				"header": [],
 				"body": {
-					"mode": "raw",
-					"raw": "{\r\n  \"amount\": 10\r\n}\r\n",
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "amount",
+							"value": "40",
+							"type": "default"
+						}
+					],
 					"options": {
 						"raw": {
 							"language": "json"
@@ -409,10 +555,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://{{dev_ip}}/ingredients/amount/{{ingredient_id}}",
+					"raw": "http://{{cc_ip}}/ingredients/amount/{{ingredient_id}}",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"ingredients",
@@ -469,10 +615,10 @@
 				"method": "DELETE",
 				"header": [],
 				"url": {
-					"raw": "http://{{dev_ip}}/ingredients/{{ingredient_id}}",
+					"raw": "http://{{cc_ip}}/ingredients/{{ingredient_id}}",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"ingredients",
@@ -522,10 +668,10 @@
 				"method": "DELETE",
 				"header": [],
 				"url": {
-					"raw": "http://{{dev_ip}}/ingredients",
+					"raw": "http://{{cc_ip}}/ingredients",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"ingredients"
@@ -564,43 +710,13 @@
 				"method": "POST",
 				"header": [],
 				"url": {
-					"raw": "http://{{dev_ip}}/logout",
+					"raw": "http://{{cc_ip}}/logout",
 					"protocol": "http",
 					"host": [
-						"{{dev_ip}}"
+						"{{cc_ip}}"
 					],
 					"path": [
 						"logout"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Predict Ingredients",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": [
-						{
-							"key": "file",
-							"type": "file",
-							"src": []
-						}
-					]
-				},
-				"url": {
-					"raw": "/predict?Authorization=Bearer {{token}}",
-					"path": [
-						"predict"
-					],
-					"query": [
-						{
-							"key": "Authorization",
-							"value": "Bearer {{token}}"
-						}
 					]
 				}
 			},

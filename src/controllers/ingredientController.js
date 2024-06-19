@@ -99,28 +99,35 @@ exports.predictIngredients = async (req, h) => {
 exports.recommendMenu = async (req, h) => {
   try {
     const userId = req.user ? req.user.user_id : null;
-
     if (!userId) {
       return h.response({ error: true, message: 'User not authenticated' }).code(401);
     }
 
     const refrigeratorDocRef = db_fs.collection('refrigerator').doc(userId);
     const userIngredientsSnapshot = await refrigeratorDocRef.collection('Ingredient').get();
+
     if (userIngredientsSnapshot.empty) {
       return h.response({ error: true, message: 'No ingredients found in the refrigerator' }).code(404);
     }
+    
+    userIngredientsSnapshot.forEach(doc => {
+      const ingredient = { id: doc.id, ...doc.data() };
+      amount = ingredient.amount; // Access the amount property
+      console.log(`${ingredient.name} existing amount ${amount}`);
+    });
 
     const userIngredients = userIngredientsSnapshot.docs.map(doc => doc.data().name.toLowerCase());
     const recipeCollection = db_fs.collection('recipes');
     let recipes = [];
+    console.log(userIngredients);
 
     const allRecipesSnapshot = await recipeCollection.get();
     allRecipesSnapshot.forEach(doc => {
       const recipe = doc.data();
       const recipeIngredients = recipe.ingredients.toLowerCase().split(';');
 
-      const hasAllIngredients = userIngredients.every(ingredient => recipeIngredients.includes(ingredient));
-      if (hasAllIngredients) {
+      const hasAtLeastOneIngredient = userIngredients.some(ingredient => recipeIngredients.includes(ingredient));
+      if (hasAtLeastOneIngredient) {
         recipes.push({
           id: doc.id,
           title: recipe.title,
@@ -134,7 +141,7 @@ exports.recommendMenu = async (req, h) => {
     });
 
     if (recipes.length === 0) {
-      return h.response({ error: false, message: 'No recipes found' }).code(200);
+      return h.response({ error: true, message: 'No recipes found' }).code(404);
     }
 
     return h.response({ error: false, message: 'Recipes returned succesfully', recipes: recipes }).code(200);
