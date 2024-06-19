@@ -157,6 +157,41 @@ exports.addIngredient = (db) => async (req, h) => {
   }
 };
 
+exports.addMultipleIngredients = (db) => async (req, h) => {
+  const { ingredients } = req.payload;
+  const userId = req.user ? req.user.user_id : null;
+
+  if (!userId) {
+    return h.response({ error: 'User not authenticated' }).code(401);
+  }
+
+  const userDocRef = db_fs.collection('refrigerator').doc(userId);
+  const batch = db_fs.batch();
+
+  try {
+    // Ensure the user document exists in the refrigerator collection
+    await userDocRef.set({ userId: userId }, { merge: true });
+
+    for (const ingredient of ingredients) {
+      const ingredientId = ingredientsWithFixedIds[ingredient.name.toLowerCase()] || nanoid(4);
+      const data = {
+        name: ingredient.name,
+        amount: parseInt(ingredient.amount, 10),
+        last_update: new Date().toISOString()
+      };
+
+      const ingredientDocRef = userDocRef.collection('Ingredient').doc(ingredientId);
+      batch.set(ingredientDocRef, data);
+    }
+
+    await batch.commit();
+    return h.response({ message: 'Ingredients added successfully' }).code(201);
+  } catch (error) {
+    console.error('Error adding ingredients:', error);
+    return h.response({ error: error.message }).code(500);
+  }
+}
+
 exports.getIngredients = (db) => async (req, h) => {
   const userId = req.user ? req.user.user_id : null;
   if (!userId) {
