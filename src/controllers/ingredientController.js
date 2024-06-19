@@ -1,10 +1,8 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const { nanoid } = require('nanoid');
-
 const { Firestore } = require('@google-cloud/firestore');
 const db_fs = new Firestore();
-
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -32,13 +30,11 @@ exports.predictIngredients = async (req, h) => {
       return h.response({ error: 'User not authenticated' }).code(401);
     }
 
-    // Step 1: Accept image file from frontend
     const file = req.payload.file;
     if (!file) {
       return h.response({ error: 'No image file provided' }).code(400);
     }
 
-    // Step 2: Pass the image to Django API for recognition
     const formData = new FormData();
     formData.append('file', file._data, file.hapi.filename);
     const djangoApiUrl = process.env.DJANGO_API_ENDPOINT;
@@ -53,40 +49,29 @@ exports.predictIngredients = async (req, h) => {
 
     const predictedIngredients = djangoResponse.data.ingredients;
 
-    // Get a reference to the user's refrigerator document
     const refrigeratorCollection = db_fs.collection('refrigerator').doc(userId);
     const userIngredientsRef = refrigeratorCollection.collection('Ingredient');
-
-    // Start a Firestore batch
     const batch = db_fs.batch();
 
-    // Iterate over the ingredients to update
     for (const ingredientName of predictedIngredients) {
-      // Count the number of times the ingredient appears in the array
       const ingredientAmount = predictedIngredients.filter(name => name === ingredientName).length;
 
-      // Check if the ingredient exists in the user's ingredients collection
       const ingredientQuery = await userIngredientsRef.where('name', '==', ingredientName).get();
       if (!ingredientQuery.empty) {
-        // If the ingredient exists, update its amount
         const ingredientDoc = ingredientQuery.docs[0];
         batch.update(ingredientDoc.ref, { amount: ingredientAmount, last_update: new Date().toISOString() });
       } else {
-        // If the ingredient doesn't exist, add it to the user's ingredients collection
         const newIngredientDocRef = userIngredientsRef.doc();
         batch.set(newIngredientDocRef, { name: ingredientName, amount: ingredientAmount, last_update: new Date().toISOString() });
       }
     }
 
-    // Commit the batched writes
     await batch.commit();
-
     return h.response({ message: 'Ingredient prediction and update successful', predictions: predictedIngredients }).code(200);
   } catch (error) {
     if (error.code === 'ECONNRESET') {
       return h.response({ error: 'Connection to the Django API was reset' }).code(500);
     }
-
     console.error('Error in predictIngredients:', error);
     return h.response({ error: error.message }).code(500);
   }
@@ -100,10 +85,7 @@ exports.recommendMenu = async (req, h) => {
       return h.response({ error: 'User not authenticated' }).code(401);
     }
 
-    // Get a reference to the user's refrigerator document
     const refrigeratorDocRef = db_fs.collection('refrigerator').doc(userId);
-    
-    // Get all ingredients from the user's refrigerator
     const userIngredientsSnapshot = await refrigeratorDocRef.collection('Ingredient').get();
     if (userIngredientsSnapshot.empty) {
       return h.response({ message: 'No ingredients found in the refrigerator' }).code(404);
@@ -113,7 +95,6 @@ exports.recommendMenu = async (req, h) => {
     const recipeCollection = db_fs.collection('recipes');
     let recipes = [];
 
-    // Perform a full-text search for recipes based on the user's ingredients
     const allRecipesSnapshot = await recipeCollection.get();
     allRecipesSnapshot.forEach(doc => {
       const recipe = doc.data();
@@ -137,9 +118,7 @@ exports.recommendMenu = async (req, h) => {
       return h.response({ message: 'No recipes found' }).code(404);
     }
 
-    // Return the recipes
     return h.response(recipes).code(200);
-
   } catch (error) {
     console.error('Error in recommendMenu:', error);
     return h.response({ error: error.message }).code(500);
@@ -162,7 +141,6 @@ exports.addIngredient = (db) => async (req, h) => {
     last_update: new Date().toISOString()
   };
 
-  const db_fs = new Firestore();
   const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredientId);
 
   try {
@@ -180,7 +158,6 @@ exports.getIngredients = (db) => async (req, h) => {
     return h.response({ error: 'User not authenticated' }).code(401);
   }
 
-  const db_fs = new Firestore();
   const ingredientCollectionRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient');
 
   try {
@@ -188,12 +165,12 @@ exports.getIngredients = (db) => async (req, h) => {
     if (snapshot.empty) {
       return h.response({ message: 'No ingredients found' }).code(404);
     }
-    
+
     const ingredients = [];
     snapshot.forEach(doc => {
       ingredients.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return h.response(ingredients).code(200);
   } catch (error) {
     console.error('Error getting ingredients:', error);
@@ -202,7 +179,6 @@ exports.getIngredients = (db) => async (req, h) => {
 };
 
 exports.getIngredientById = (db) => async (req, h) => {
-  // Menggunakan req.params untuk mendapatkan parameter ingredient_id
   const { ingredient_id } = req.params;
   const userId = req.user ? req.user.user_id : null;
 
@@ -212,7 +188,6 @@ exports.getIngredientById = (db) => async (req, h) => {
 
   console.log('Getting ingredient with ID:', ingredient_id, 'for user ID:', userId);
 
-  const db_fs = new Firestore();
   const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredient_id);
 
   try {
@@ -241,7 +216,6 @@ exports.updateIngredientAmount = (db) => async (req, h) => {
 
   console.log('Updating ingredient with ID:', ingredient_id, 'for user ID:', userId, 'with new amount:', amount);
 
-  const db_fs = new Firestore();
   const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredient_id);
 
   try {
@@ -271,7 +245,6 @@ exports.deleteIngredientById = (db) => async (req, h) => {
 
   console.log('Deleting ingredient with ID:', ingredient_id, 'for user ID:', userId);
 
-  const db_fs = new Firestore();
   const ingredientDocRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient').doc(ingredient_id);
 
   try {
@@ -299,7 +272,6 @@ exports.deleteAllIngredients = (db) => async (req, h) => {
 
   console.log('Deleting all ingredients for user ID:', userId);
 
-  const db_fs = new Firestore();
   const ingredientCollectionRef = db_fs.collection('refrigerator').doc(userId).collection('Ingredient');
 
   try {
