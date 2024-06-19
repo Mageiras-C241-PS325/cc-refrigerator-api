@@ -230,7 +230,7 @@ exports.getIngredients = (db) => async (req, h) => {
       ingredients.push({ id: doc.id, ...doc.data() });
     });
 
-    return h.response(ingredients).code(200);
+    return h.response({ ingredients: ingredients }).code(200);
   } catch (error) {
     console.error('Error getting ingredients:', error);
     return h.response({ error: error.message }).code(500);
