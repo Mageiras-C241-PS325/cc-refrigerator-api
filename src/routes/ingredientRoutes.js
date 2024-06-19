@@ -96,7 +96,7 @@ module.exports = (db) => {
         },
         {
           method: 'PUT',
-          path: 'ingredients/amountmany',
+          path: '/ingredients/amountmany',
           options: {
             payload: {
               maxBytes: 10485760,
