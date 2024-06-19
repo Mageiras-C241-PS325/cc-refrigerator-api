@@ -21,6 +21,6 @@ async function deleteDocument(collectionName, documentId) {
 
 // Example usage
 const collectionName = 'refrigerator';
-const documentId = 'QnXfsyFsYXVwEveVwAD9INvYQ9J2'; // Replace with your document ID
+const documentId = ''; // Replace with your document ID
 
 deleteDocument(collectionName, documentId);

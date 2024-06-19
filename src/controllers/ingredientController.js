@@ -47,22 +47,41 @@ exports.predictIngredients = async (req, h) => {
       return h.response({ error: 'Failed to recognize image' }).code(500);
     }
 
-    const predictedIngredients = djangoResponse.data.ingredients;
+    const predictedIngredients = djangoResponse.data.prediction;
+    console.log(`predicted Ingredients: ${predictedIngredients}`);
 
     const refrigeratorCollection = db_fs.collection('refrigerator').doc(userId);
     const userIngredientsRef = refrigeratorCollection.collection('Ingredient');
     const batch = db_fs.batch();
 
     for (const ingredientName of predictedIngredients) {
-      const ingredientAmount = predictedIngredients.filter(name => name === ingredientName).length;
-
+      let ingredientAmount = predictedIngredients.filter(name => name === ingredientName).length;
+      console.log(`${ingredientName} add amount ${ingredientAmount}`);
       const ingredientQuery = await userIngredientsRef.where('name', '==', ingredientName).get();
+      let amount = 0;
+
       if (!ingredientQuery.empty) {
         const ingredientDoc = ingredientQuery.docs[0];
+
+        ingredientQuery.forEach(doc => {
+          const ingredient = { id: doc.id, ...doc.data() };
+          amount = ingredient.amount; // Access the amount property
+          console.log(`${ingredient.name} existing amount ${amount}`);
+        });
+
+        ingredientAmount = ingredientAmount + amount;
+        console.log(`${ingredientName} total amount ${ingredientAmount}`);
         batch.update(ingredientDoc.ref, { amount: ingredientAmount, last_update: new Date().toISOString() });
       } else {
-        const newIngredientDocRef = userIngredientsRef.doc();
-        batch.set(newIngredientDocRef, { name: ingredientName, amount: ingredientAmount, last_update: new Date().toISOString() });
+        const ingredientId = ingredientsWithFixedIds[ingredientName.toLowerCase()] || nanoid(4);
+        const data = {
+          name: ingredientName,
+          amount: ingredientAmount,
+          last_update: new Date().toISOString()
+        };
+
+        const newIngredientDocRef = userIngredientsRef.doc(ingredientId);
+        batch.set(newIngredientDocRef, data);
       }
     }
 

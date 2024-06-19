@@ -15,13 +15,10 @@ const init = async () => {
 
   // Register routes
   await server.register(require('./src/routes/authRoutes')(db));
-  console.log('Auth routes registered');
-
   await server.register(require('./src/routes/ingredientRoutes')(db));
-  console.log('Ingredient routes registered');
 
   await server.start();
-  console.log(`Server running on ${server.info.uri}`);
+  console.log(`Server berjalan di ${server.info.uri}`);
 };
 
 process.on('unhandledRejection', (err) => {
