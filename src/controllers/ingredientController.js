@@ -119,14 +119,13 @@ exports.recommendMenu = async (req, h) => {
     const userIngredients = userIngredientsSnapshot.docs.map(doc => doc.data().name.toLowerCase());
     const recipeCollection = db_fs.collection('recipes');
     let recipes = [];
-    console.log(userIngredients);
 
     const allRecipesSnapshot = await recipeCollection.get();
     allRecipesSnapshot.forEach(doc => {
       const recipe = doc.data();
       const recipeIngredients = recipe.ingredients.toLowerCase().split(';');
+      const hasAtLeastOneIngredient = userIngredients.filter(ingredient => recipeIngredients.includes(ingredient)).length;
 
-      const hasAtLeastOneIngredient = userIngredients.some(ingredient => recipeIngredients.includes(ingredient));
       if (hasAtLeastOneIngredient) {
         recipes.push({
           id: doc.id,
@@ -135,10 +134,13 @@ exports.recommendMenu = async (req, h) => {
           genre: recipe.genre,
           image_url: recipe.image_url,
           ingredients: recipe.ingredients,
-          label: recipe.label
+          label: recipe.label,
+          ingredient_match: hasAtLeastOneIngredient
         });
       }
     });
+
+    recipes.sort((a, b) => b.ingredient_match - a.ingredient_match);
 
     if (recipes.length === 0) {
       return h.response({ error: true, message: 'No recipes found' }).code(404);
